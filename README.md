@@ -1,8 +1,8 @@
 # Scan-and-Solve
 
-A planned Chrome extension that lets you drag a box around a question on a webpage and see the answer, a step-by-step explanation, and follow-up chat in the browser sidebar.
+A Chrome extension that lets you drag a box around a question on a webpage and see the answer, a step-by-step explanation, and follow-up chat in the browser sidebar.
 
-**Status:** Planning. This repository does not yet contain a working extension or backend. The first version will be a private prototype for personal testing before a public release.
+**Status:** Active prototype. The extension, drag-to-scan capture flow, sidebar, local server, and demo response path are implemented. The next milestone is connecting a vision-capable AI provider so selected questions receive real answers. This first version is for personal testing before a public release.
 
 ## The experience
 
@@ -92,9 +92,7 @@ The first version will send the cropped image directly to an image-capable model
 
 OCR can be evaluated later for searchable text, highlighting, or selecting individual questions. The model's interpretation of a question is not a verified transcription, and generated solutions still need accuracy testing.
 
-## Proposed repository structure
-
-The directories below describe the intended implementation and have not been created yet.
+## Repository structure
 
 ```text
 scan-and-solve/
@@ -156,8 +154,8 @@ The prototype is **not offline**: the local backend sends the selected crop and 
 
 | Stage | Deliverable | Completion check |
 | --- | --- | --- |
-| 1. Extension and interface | Locally installable extension with a React sidebar and sample answer | Toolbar opens the sidebar; answer-first layout and follow-up input are usable |
-| 2. Drag-to-scan | Selection overlay, cancellation, capture, cropping, and preview | The resulting image matches the selected question across supported zoom and display settings |
+| 1. Extension and interface | Locally installable extension with a React sidebar and sample answer | **Implemented:** toolbar opens the sidebar; answer-first layout and follow-up input are usable |
+| 2. Drag-to-scan | Selection overlay, cancellation, capture, cropping, and preview | **Implemented:** drag selection, local crop, preview, and Escape cancellation are built; manual browser testing remains |
 | 3. AI connection | Local Node.js backend and a selected vision model | A real selected question produces an answer and explanation; credentials stay server-side |
 | 4. Chat and reliability | Contextual follow-ups, formatting, retry, cancellation, and error handling | Follow-ups refer to the correct question and failures leave the interface usable |
 | 5. Personal testing | Representative question set and browser checks | Document accuracy, incomplete-input behavior, response time, and approximate API cost |
@@ -192,6 +190,37 @@ The prototype is **not offline**: the local backend sends the selected crop and 
 - Whether image paste/upload and local conversation history belong in the first release.
 - Hosting, account design, and pricing for a future public version.
 
-## Setup
+## Run the prototype
 
-Installation commands, environment variables, and development instructions will be added when the extension and backend exist. For now, this README is the agreed product direction and proposed build plan.
+Requirements: Chrome 116 or newer and Node.js 22.6 or newer.
+
+1. Install dependencies and create the extension build:
+
+   ```bash
+   npm install
+   npm run build
+   ```
+
+2. In Chrome, open `chrome://extensions`, turn on **Developer mode**, choose **Load unpacked**, and select the `extension/dist` directory.
+
+3. Start the local server from the repository root:
+
+   ```bash
+   npm start --workspace server
+   ```
+
+4. Open a normal webpage, click the **Scan & Solve** toolbar icon, drag around a question, and release.
+
+The current server runs in demo mode. It confirms that the selected crop reached the server and returns a sample step-by-step response; it does not interpret the question yet.
+
+For development, `npm run dev` watches the extension files and restarts the server when code changes. After an extension rebuild, click **Reload** for Scan & Solve on `chrome://extensions`.
+
+## Project checks
+
+```bash
+npm run typecheck
+npm test
+npm run build
+```
+
+Tests currently cover image-coordinate scaling and server request validation. Manual browser checks are still required for Chrome permission behavior, selection appearance, and capture accuracy across display settings.
