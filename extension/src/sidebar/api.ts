@@ -17,11 +17,12 @@ export async function askFollowUp(
   imageDataUrl: string,
   question: string,
   conversation: ChatMessage[],
+  solution: SolutionResponse,
   signal?: AbortSignal
 ): Promise<FollowUpResponse> {
   return post<FollowUpResponse>(
     "/api/follow-up",
-    { imageDataUrl, question, conversation },
+    { imageDataUrl, question, conversation, solution },
     signal
   );
 }

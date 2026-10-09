@@ -1,6 +1,9 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { createSolver } from "./solver.ts";
+import { loadLocalEnvironment } from "./config.ts";
+import { createSolver, SolverError } from "./solver.ts";
 import { MAX_BODY_BYTES, parseFollowUpRequest, parseSolveRequest } from "./validation.ts";
+
+loadLocalEnvironment();
 
 const HOST = "127.0.0.1";
 const PORT = Number(process.env.PORT || 8787);
@@ -15,7 +18,7 @@ const server = createServer(async (request, response) => {
   }
 
   if (request.method === "GET" && request.url === "/health") {
-    sendJson(response, 200, { status: "ok", mode: "demo" });
+    sendJson(response, 200, { status: "ok", mode: solver.mode, model: solver.model });
     return;
   }
 
@@ -37,13 +40,14 @@ const server = createServer(async (request, response) => {
     sendJson(response, 404, { error: "Not found." });
   } catch (error) {
     const message = error instanceof Error ? error.message : "The request could not be processed.";
-    const status = message === "Request body is too large." ? 413 : 400;
+    const status = message === "Request body is too large." ? 413 : error instanceof SolverError ? 502 : 400;
     sendJson(response, status, { error: message });
   }
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`Scan & Solve server running at http://${HOST}:${PORT} (demo mode)`);
+  const model = solver.model ? `, model: ${solver.model}` : "";
+  console.log(`Scan & Solve server running at http://${HOST}:${PORT} (${solver.mode} mode${model})`);
 });
 
 function readJsonBody(request: IncomingMessage): Promise<unknown> {

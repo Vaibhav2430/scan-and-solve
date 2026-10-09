@@ -104,7 +104,8 @@ export function App() {
     setAsking(true);
 
     try {
-      const result = await askFollowUp(scan.imageDataUrl, question, conversation);
+      if (!solution) throw new Error("The original solution is no longer available.");
+      const result = await askFollowUp(scan.imageDataUrl, question, conversation, solution);
       setConversation([
         ...nextConversation,
         { role: "assistant", content: result.answer }

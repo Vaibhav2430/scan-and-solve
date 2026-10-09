@@ -3,6 +3,11 @@ import { describe, it } from "node:test";
 import { parseFollowUpRequest, parseSolveRequest } from "./validation.ts";
 
 const imageDataUrl = "data:image/png;base64,aGVsbG8=";
+const solution = {
+  answer: "4",
+  interpretedQuestion: "2 + 2",
+  steps: [{ title: "Add", explanation: "Combine the values.", work: "2 + 2 = 4" }]
+};
 
 describe("request validation", () => {
   it("accepts a supported image data URL", () => {
@@ -14,6 +19,6 @@ describe("request validation", () => {
   });
 
   it("trims follow-up questions", () => {
-    assert.equal(parseFollowUpRequest({ imageDataUrl, question: "  Why?  ", conversation: [] }).question, "Why?");
+    assert.equal(parseFollowUpRequest({ imageDataUrl, question: "  Why?  ", conversation: [], solution }).question, "Why?");
   });
 });

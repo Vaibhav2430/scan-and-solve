@@ -2,7 +2,7 @@
 
 A Chrome extension that lets you drag a box around a question on a webpage and see the answer, a step-by-step explanation, and follow-up chat in the browser sidebar.
 
-**Status:** Active prototype. The extension, drag-to-scan capture flow, sidebar, local server, and demo response path are implemented. The next milestone is connecting a vision-capable AI provider so selected questions receive real answers. This first version is for personal testing before a public release.
+**Status:** Active prototype. The extension, drag-to-scan capture flow, sidebar, local server, and Gemini vision integration are implemented. Without an API key the server stays in demo mode. This first version is for personal testing before a public release.
 
 ## The experience
 
@@ -51,7 +51,7 @@ Each step should explain what to do and why. Answers should support readable equ
 | Styling | HTML + CSS | Layout, typography, and interaction states |
 | Capture | Chrome screenshot API + browser Canvas API | Capture the visible tab and crop the selected region locally |
 | Backend | TypeScript + Node.js | Validate requests, call the AI service, and return responses |
-| AI | An image-capable AI service; provider/model to be selected | Interpret the selected question and generate a solution |
+| AI | Gemini API, with Gemini 3.1 Flash-Lite as the default | Read the selected question and generate a structured solution using the free tier |
 | Preferences | Chrome local storage | Remember settings on the user's browser |
 | Shared contracts | TypeScript definitions and runtime validation | Keep extension and backend requests consistent |
 
@@ -123,7 +123,7 @@ scan-and-solve/
 - Follow-up chat that retains the current question's context.
 - Equation and code formatting where needed.
 - Loading, cancellation, retry, copy answer, and start-over behavior.
-- A locally running backend connected to an online AI service.
+- A locally running backend connected to Gemini's hosted API.
 
 ### Optional fallback
 
@@ -156,7 +156,7 @@ The prototype is **not offline**: the local backend sends the selected crop and 
 | --- | --- | --- |
 | 1. Extension and interface | Locally installable extension with a React sidebar and sample answer | **Implemented:** toolbar opens the sidebar; answer-first layout and follow-up input are usable |
 | 2. Drag-to-scan | Selection overlay, cancellation, capture, cropping, and preview | **Implemented:** drag selection, local crop, preview, and Escape cancellation are built; manual browser testing remains |
-| 3. AI connection | Local Node.js backend and a selected vision model | A real selected question produces an answer and explanation; credentials stay server-side |
+| 3. AI connection | Local Node.js backend and a selected vision model | **Implemented:** the Gemini API accepts the selected image and returns a structured answer; a free-tier API key is required for live testing |
 | 4. Chat and reliability | Contextual follow-ups, formatting, retry, cancellation, and error handling | Follow-ups refer to the correct question and failures leave the interface usable |
 | 5. Personal testing | Representative question set and browser checks | Document accuracy, incomplete-input behavior, response time, and approximate API cost |
 | 6. Public-release preparation | Hosted backend, access controls, usage limits, and distribution materials | Address the public-release requirements below before opening access |
@@ -185,7 +185,7 @@ The prototype is **not offline**: the local backend sends the selected crop and 
 ## Decisions still open
 
 - Initial question focus: primarily schoolwork/math or broader webpage questions.
-- AI provider and model, selected using accuracy, response time, and cost tests.
+- Model evaluation: test Gemini 3.1 Flash-Lite on representative questions for accuracy and response time.
 - Exact keyboard shortcut and visual styling.
 - Whether image paste/upload and local conversation history belong in the first release.
 - Hosting, account design, and pricing for a future public version.
@@ -203,15 +203,25 @@ Requirements: Chrome 116 or newer and Node.js 22.6 or newer.
 
 2. In Chrome, open `chrome://extensions`, turn on **Developer mode**, choose **Load unpacked**, and select the `extension/dist` directory.
 
-3. Start the local server from the repository root:
+3. Create a private server configuration file:
+
+   ```bash
+   cp server/.env.example server/.env
+   ```
+
+   Open [Google AI Studio](https://aistudio.google.com/app/apikey), create an API key for a project whose **Billing Tier** is **Free**, and do not choose **Set up billing**. Then open `server/.env` and replace `your_api_key_here` with that Gemini key. Never put the key in extension code or commit the `.env` file. If the file is missing or still contains the placeholder, the server safely uses demo mode.
+
+4. Start the local server from the repository root:
 
    ```bash
    npm start --workspace server
    ```
 
-4. Open a normal webpage, click the **Scan & Solve** toolbar icon, drag around a question, and release.
+5. Open a normal webpage, click the **Scan & Solve** toolbar icon, drag around a question, and release.
 
-The current server runs in demo mode. It confirms that the selected crop reached the server and returns a sample step-by-step response; it does not interpret the question yet.
+The server reports either `demo mode` or `gemini mode` when it starts. Gemini mode sends the selected crop and relevant follow-up context to the Gemini API. The API key remains in the local server process and is never bundled into the extension.
+
+The application cannot change a Google project's billing status. Before adding the key, confirm that AI Studio shows **Free** for that project. With no billing account linked, exceeding the free quota stops requests instead of charging for additional usage. Free-tier prompts and responses may be used by Google to improve its products, so do not scan private information.
 
 For development, `npm run dev` watches the extension files and restarts the server when code changes. After an extension rebuild, click **Reload** for Scan & Solve on `chrome://extensions`.
 

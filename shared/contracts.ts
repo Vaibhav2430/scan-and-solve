@@ -12,6 +12,7 @@ export type FollowUpRequest = {
   imageDataUrl: string;
   question: string;
   conversation: ChatMessage[];
+  solution: SolutionResponse;
 };
 
 export type ChatMessage = {
