@@ -1,5 +1,6 @@
 import type { ScanRect, ScanRegionMessage } from "./types";
 
+(() => {
 const ROOT_ID = "scan-and-solve-selection-root";
 document.getElementById(ROOT_ID)?.remove();
 
@@ -116,3 +117,4 @@ function updateSelection(rect: ScanRect): void {
   selection.style.width = `${rect.width}px`;
   selection.style.height = `${rect.height}px`;
 }
+})();
