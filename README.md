@@ -47,7 +47,7 @@ Each step should explain what to do and why. Answers should support readable equ
 | Part | Technology | Purpose |
 | --- | --- | --- |
 | Extension | TypeScript + Chrome Manifest V3 | Browser integration, permissions, and capture coordination |
-| Sidebar | React + TypeScript | Answer display, captured-image preview, and follow-up chat |
+| Sidebar | React + TypeScript + KaTeX | Answer display, formatted equations, captured-image preview, and follow-up chat |
 | Styling | HTML + CSS | Layout, typography, and interaction states |
 | Capture | Chrome screenshot API + browser Canvas API | Capture the visible tab and crop the selected region locally |
 | Backend | TypeScript + Node.js | Validate requests, call the AI service, and return responses |
@@ -121,7 +121,7 @@ scan-and-solve/
 - Cropped-image preview in the sidebar.
 - **Answer:** at the top, followed by the full step-by-step explanation.
 - Follow-up chat that retains the current question's context.
-- Equation and code formatting where needed.
+- KaTeX formatting for fractions, exponents, roots, matrices, and equations while preserving ordinary text and code.
 - Loading, cancellation, retry, copy answer, and start-over behavior.
 - A locally running backend connected to Gemini's hosted API.
 

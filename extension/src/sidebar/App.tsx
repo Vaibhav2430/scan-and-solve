@@ -5,6 +5,7 @@ import type {
 } from "../../../shared/contracts";
 import type { ScanErrorState, ScanState } from "../types";
 import { askFollowUp, solveImage } from "./api";
+import { MathText } from "./MathText";
 
 type ViewState = "empty" | "solving" | "solved" | "error";
 
@@ -229,7 +230,7 @@ function SolvedState(props: SolvedStateProps) {
 
       <section className="answer-card">
         <p className="answer-label">ANSWER</p>
-        <div className="answer-value">{solution.answer}</div>
+        <div className="answer-value"><MathText text={solution.answer} /></div>
       </section>
 
       <section className="steps-section">
@@ -242,20 +243,20 @@ function SolvedState(props: SolvedStateProps) {
             <li key={`${step.title}-${index}`}>
               <div className="step-number">{index + 1}</div>
               <div className="step-body">
-                <h3>{step.title}</h3>
-                <p>{step.explanation}</p>
-                {step.work && <pre>{step.work}</pre>}
+                <h3><MathText text={step.title} /></h3>
+                <p><MathText text={step.explanation} /></p>
+                {step.work && <div className="step-work"><MathText text={step.work} /></div>}
               </div>
             </li>
           ))}
         </ol>
-        {solution.note && <div className="note">{solution.note}</div>}
+        {solution.note && <div className="note"><MathText text={solution.note} /></div>}
       </section>
 
       {conversation.length > 0 && (
         <section className="conversation" aria-label="Follow-up conversation">
           {conversation.map((message, index) => (
-            <div key={index} className={`message ${message.role}`}>{message.content}</div>
+            <div key={index} className={`message ${message.role}`}><MathText text={message.content} /></div>
           ))}
           {asking && <div className="message assistant typing">Thinking…</div>}
         </section>
@@ -284,7 +285,7 @@ function QuestionPreview({ scan, interpretedQuestion }: { scan: ScanState; inter
   return (
     <section className="question-card">
       <div className="preview-image-wrap"><img src={scan.imageDataUrl} alt="Selected question" /></div>
-      {interpretedQuestion && <p className="interpreted">{interpretedQuestion}</p>}
+      {interpretedQuestion && <p className="interpreted"><MathText text={interpretedQuestion} /></p>}
     </section>
   );
 }
