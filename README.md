@@ -7,7 +7,7 @@ A Chrome extension that lets you drag a box around a question on a webpage and s
 ## The experience
 
 1. Open a webpage containing a question.
-2. Activate the extension using its toolbar icon or a keyboard shortcut.
+2. Activate the extension using its toolbar icon, keyboard shortcut, or **Scan with Scan & Solve** in the page's right-click menu.
 3. Drag a box around the complete question, including any diagrams or answer choices.
 4. Release to automatically capture, crop, and submit that area.
 5. Read the answer and explanation in the sidebar.
@@ -116,7 +116,7 @@ scan-and-solve/
 ### Included
 
 - Chrome on desktop, installed locally for personal use.
-- Toolbar and keyboard activation.
+- Toolbar, keyboard shortcut, and right-click menu activation.
 - Drag-to-scan with automatic submission on release.
 - Cropped-image preview in the sidebar.
 - **Answer:** at the top, followed by the full step-by-step explanation.

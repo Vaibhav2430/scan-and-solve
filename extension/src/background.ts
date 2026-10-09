@@ -1,12 +1,29 @@
 import { cropScreenshot } from "./crop";
 import type { ScanErrorState, ScanRegionMessage, ScanState } from "./types";
 
-chrome.runtime.onInstalled.addListener(() => {
+const CONTEXT_MENU_ID = "scan-and-solve-start";
+
+chrome.runtime.onInstalled.addListener(async () => {
   void chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false });
+  await chrome.contextMenus.removeAll();
+  chrome.contextMenus.create({
+    id: CONTEXT_MENU_ID,
+    title: "Scan with Scan & Solve",
+    contexts: ["page", "selection", "image", "link"]
+  });
 });
 
 chrome.action.onClicked.addListener(async (tab) => {
-  if (!tab.id || !tab.windowId) return;
+  await startScan(tab);
+});
+
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  if (info.menuItemId !== CONTEXT_MENU_ID || !tab) return;
+  await startScan(tab);
+});
+
+async function startScan(tab: chrome.tabs.Tab): Promise<void> {
+  if (!tab.id) return;
 
   try {
     await chrome.sidePanel.open({ tabId: tab.id });
@@ -17,7 +34,7 @@ chrome.action.onClicked.addListener(async (tab) => {
   } catch (error) {
     await saveError(readError(error, "This page does not allow scanning."));
   }
-});
+}
 
 chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
   if (!isScanRegionMessage(message)) return false;
