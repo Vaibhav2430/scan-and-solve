@@ -4,10 +4,14 @@ import type {
   SolutionResponse
 } from "../../../shared/contracts";
 import type { ScanErrorState, ScanState } from "../types";
-import { askFollowUp, solveImage } from "./api";
+import { askFollowUp, getHealth, solveImage, type HealthResponse } from "./api";
 import { MathText } from "./MathText";
 
 type ViewState = "empty" | "solving" | "solved" | "error";
+type ConnectionState = {
+  status: "checking" | "connected" | "demo" | "offline";
+  provider?: "gemini" | "openai";
+};
 
 export function App() {
   const [scan, setScan] = useState<ScanState | null>(null);
@@ -17,7 +21,37 @@ export function App() {
   const [followUp, setFollowUp] = useState("");
   const [conversation, setConversation] = useState<ChatMessage[]>([]);
   const [asking, setAsking] = useState(false);
+  const [connection, setConnection] = useState<ConnectionState>({ status: "checking" });
   const activeRequest = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const checkConnection = async () => {
+      try {
+        const health = await getHealth(controller.signal);
+        setConnection(readConnectionState(health));
+      } catch (connectionError) {
+        if (connectionError instanceof DOMException && connectionError.name === "AbortError") return;
+        setConnection({ status: "offline" });
+      }
+    };
+    void checkConnection();
+    const interval = window.setInterval(() => void checkConnection(), 15_000);
+    return () => {
+      controller.abort();
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      void removeSelectionOverlay();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   const solve = useCallback(async (nextScan: ScanState) => {
     activeRequest.current?.abort();
@@ -136,7 +170,9 @@ export function App() {
           <div className="brand-mark" aria-hidden="true"><span /></div>
           <div>
             <div className="brand-name">Scan &amp; Solve</div>
-            <div className="brand-caption">Instant step-by-step help</div>
+            <div className={`brand-caption connection-status ${connection.status}`} aria-live="polite">
+              <span aria-hidden="true" />{connectionLabel(connection)}
+            </div>
           </div>
         </div>
         <button className="icon-button" onClick={startScan} aria-label="Scan another question" title="Scan another question">
@@ -297,4 +333,22 @@ function ArrowIcon() { return <svg viewBox="0 0 24 24" aria-hidden="true"><path 
 
 function readError(error: unknown, fallback = "Please try again."): string {
   return error instanceof Error && error.message ? error.message : fallback;
+}
+
+function readConnectionState(health: HealthResponse): ConnectionState {
+  if (health.mode === "demo") return { status: "demo" };
+  return { status: "connected", provider: health.mode };
+}
+
+function connectionLabel(connection: ConnectionState): string {
+  if (connection.status === "connected") return connection.provider === "openai" ? "OpenAI connected" : "Gemini connected";
+  if (connection.status === "demo") return "Demo mode";
+  if (connection.status === "offline") return "Server offline";
+  return "Checking connection…";
+}
+
+async function removeSelectionOverlay(): Promise<void> {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab.id) return;
+  await chrome.tabs.sendMessage(tab.id, { type: "CANCEL_SCAN" }).catch(() => undefined);
 }

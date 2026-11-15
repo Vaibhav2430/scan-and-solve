@@ -6,6 +6,24 @@ import type {
 
 const API_BASE_URL = "http://127.0.0.1:8787";
 
+export type HealthResponse = {
+  status: "ok";
+  mode: "demo" | "gemini" | "openai";
+  model?: string;
+};
+
+export async function getHealth(signal?: AbortSignal): Promise<HealthResponse> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/health`, { signal });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") throw error;
+    throw new Error("The local server is offline.");
+  }
+  if (!response.ok) throw new Error(`Health check failed (${response.status}).`);
+  return response.json() as Promise<HealthResponse>;
+}
+
 export async function solveImage(
   imageDataUrl: string,
   signal?: AbortSignal

@@ -1,6 +1,6 @@
 {
   "name": "scan-and-solve",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "workspaces": [
     "extension",
@@ -9,6 +9,7 @@
   "scripts": {
     "build": "npm run build --workspace extension && npm run build --workspace server",
     "dev": "node scripts/dev.mjs",
+    "evaluate": "node --experimental-strip-types scripts/evaluate.mjs",
     "typecheck": "npm run typecheck --workspace extension && npm run typecheck --workspace server",
     "test": "npm run test --workspace extension && npm run test --workspace server"
   }

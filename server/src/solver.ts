@@ -44,6 +44,8 @@ type GeminiSolverOptions = {
   apiKey: string;
   model: string;
   fetchImplementation?: typeof fetch;
+  maxRetries?: number;
+  retryDelayMs?: number;
 };
 
 export class GeminiSolver implements Solver {
@@ -51,11 +53,15 @@ export class GeminiSolver implements Solver {
   readonly model: string;
   private readonly apiKey: string;
   private readonly fetchImplementation: typeof fetch;
+  private readonly maxRetries: number;
+  private readonly retryDelayMs: number;
 
   constructor(options: GeminiSolverOptions) {
     this.apiKey = options.apiKey;
     this.model = options.model;
     this.fetchImplementation = options.fetchImplementation || fetch;
+    this.maxRetries = options.maxRetries ?? 2;
+    this.retryDelayMs = options.retryDelayMs ?? 1_000;
   }
 
   async solve(request: SolveRequest): Promise<SolutionResponse> {
@@ -122,30 +128,35 @@ export class GeminiSolver implements Solver {
   }
 
   private async generateContent(body: unknown): Promise<unknown> {
-    let response: Response;
-    try {
-      response = await this.fetchImplementation(`${GEMINI_API_BASE_URL}/${encodeURIComponent(this.model)}:generateContent`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": this.apiKey
-        },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(90_000)
-      });
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "TimeoutError") {
-        throw new SolverError("Gemini took too long to respond. Please try again.");
+    for (let attempt = 0; attempt <= this.maxRetries; attempt += 1) {
+      let response: Response;
+      try {
+        response = await this.fetchImplementation(`${GEMINI_API_BASE_URL}/${encodeURIComponent(this.model)}:generateContent`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": this.apiKey
+          },
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(90_000)
+        });
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "TimeoutError") {
+          throw new SolverError("Gemini took too long to respond. Please try again.");
+        }
+        throw new SolverError("The server could not reach Gemini. Check your connection and try again.");
       }
-      throw new SolverError("The server could not reach Gemini. Check your connection and try again.");
-    }
 
-    const payload = await response.json().catch(() => null) as unknown;
-    if (!response.ok) {
+      const payload = await response.json().catch(() => null) as unknown;
+      if (response.ok) return payload;
+      if (attempt < this.maxRetries && isTransientGeminiError(response.status, payload)) {
+        await delay(this.retryDelayMs * 2 ** attempt);
+        continue;
+      }
       const providerMessage = readGeminiError(payload, response.status, this.model);
       throw new SolverError(providerMessage || `Gemini returned an error (${response.status}).`);
     }
-    return payload;
+    throw new SolverError("Gemini is temporarily unavailable. Please try again.");
   }
 }
 
@@ -317,13 +328,13 @@ const SOLVE_INSTRUCTIONS = `You are Scan & Solve, a careful tutor. Analyze only 
 
 Return a concise final answer first, followed by clear instructional steps. Each step must explain what to do and why. Put equations, calculations, code, or other working in the work field. Do not reveal hidden chain-of-thought; provide a concise, useful solution a student can follow.
 
-Format all mathematical notation as LaTeX. Use \\(...\\) for inline math and \\[...\\] for equations that should appear on their own line. Use proper LaTeX commands for fractions, exponents, roots, integrals, and matrices. Apply this formatting in answer, interpretedQuestion, step titles, explanations, work, and note. Leave programming code as plain text without math delimiters.
+CRITICAL DISPLAY RULE: The sidebar renders mathematical notation only when you include literal LaTeX delimiters. Put every mathematical value, expression, equation, calculation, and matrix inside \\(...\\) for inline math or \\[...\\] for display math. This applies to every output field, including answer, interpretedQuestion, step titles, explanations, work, and note. Do not return bare forms such as x = 5, 17/12, or x^2. Return \\(x = 5\\), \\(\\frac{17}{12}\\), and \\(x^2\\). Use commands such as \\frac, \\sqrt, and \\begin{bmatrix}. Leave programming code and ordinary prose outside math delimiters.
 
 Transcribe the question into interpretedQuestion. Include all answer choices or important labels when present. If the image is incomplete, unreadable, or does not contain a question, say so in the answer, explain what is missing in one step, and use note to ask the user to scan a clearer or larger area. Never invent missing details. Check calculations before responding.`;
 
 const FOLLOW_UP_INSTRUCTIONS = `You are Scan & Solve, a careful tutor answering a follow-up about a previously solved question. Use the supplied image, original displayed solution, and previous messages. Answer the user's new question directly and clearly. If they refer to a numbered step, use the numbering from the original displayed solution. Keep the response focused and do not reveal hidden chain-of-thought.
 
-Format all mathematical notation as LaTeX. Use \\(...\\) for inline math and \\[...\\] for equations that should appear on their own line. Use proper LaTeX commands for fractions, exponents, roots, integrals, and matrices. Leave programming code as plain text without math delimiters.`;
+CRITICAL DISPLAY RULE: The sidebar renders mathematical notation only when you include literal LaTeX delimiters. Put every mathematical value, expression, equation, calculation, and matrix inside \\(...\\) for inline math or \\[...\\] for display math. Do not return bare forms such as x = 5 or 17/12. Return \\(x = 5\\) and \\(\\frac{17}{12}\\). Leave programming code and ordinary prose outside math delimiters.`;
 
 const solutionFormat = {
   type: "json_schema",
@@ -333,22 +344,40 @@ const solutionFormat = {
     type: "object",
     additionalProperties: false,
     properties: {
-      answer: { type: "string" },
-      interpretedQuestion: { type: "string" },
+      answer: {
+        type: "string",
+        description: "Concise final answer. Enclose every mathematical value or expression in literal \\(...\\) or \\[...\\] LaTeX delimiters."
+      },
+      interpretedQuestion: {
+        type: "string",
+        description: "Transcribed question. Enclose every mathematical value or expression in literal \\(...\\) or \\[...\\] LaTeX delimiters."
+      },
       steps: {
         type: "array",
         items: {
           type: "object",
           additionalProperties: false,
           properties: {
-            title: { type: "string" },
-            explanation: { type: "string" },
-            work: { type: ["string", "null"] }
+            title: {
+              type: "string",
+              description: "Step title with mathematical notation enclosed in LaTeX delimiters."
+            },
+            explanation: {
+              type: "string",
+              description: "Explanation with every mathematical value or expression enclosed in LaTeX delimiters."
+            },
+            work: {
+              type: ["string", "null"],
+              description: "Calculations using literal \\(...\\) or \\[...\\] LaTeX delimiters, or plain programming code."
+            }
           },
           required: ["title", "explanation", "work"]
         }
       },
-      note: { type: ["string", "null"] }
+      note: {
+        type: ["string", "null"],
+        description: "Optional note with mathematical notation enclosed in LaTeX delimiters."
+      }
     },
     required: ["answer", "interpretedQuestion", "steps", "note"]
   }
@@ -361,7 +390,12 @@ const followUpFormat = {
   schema: {
     type: "object",
     additionalProperties: false,
-    properties: { answer: { type: "string" } },
+    properties: {
+      answer: {
+        type: "string",
+        description: "Direct answer with every mathematical value or expression enclosed in literal \\(...\\) or \\[...\\] LaTeX delimiters."
+      }
+    },
     required: ["answer"]
   }
 };
@@ -461,6 +495,14 @@ function readGeminiError(payload: unknown, status: number, model: string): strin
     return `The configured Gemini model (${model}) is unavailable. Update GEMINI_MODEL in server/.env.`;
   }
   return message;
+}
+
+function isTransientGeminiError(status: number, payload: unknown): boolean {
+  if ([500, 502, 503, 504].includes(status)) return true;
+  if (status !== 429 || !isRecord(payload) || !isRecord(payload.error) || typeof payload.error.message !== "string") {
+    return false;
+  }
+  return /high demand|temporar|overload|try again/i.test(payload.error.message);
 }
 
 function isUsableApiKey(value: string | undefined): value is string {

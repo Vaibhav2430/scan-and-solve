@@ -20,6 +20,7 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .brand-mark::before{left:8px;top:8px;border-width:2px 0 0 2px}.brand-mark::after{right:8px;top:8px;border-width:2px 2px 0 0}.brand-mark span::before{left:8px;bottom:8px;border-width:0 0 2px 2px}.brand-mark span::after{right:8px;bottom:8px;border-width:0 2px 2px 0}
 .brand-name { font-weight: 760; letter-spacing: -.02em; font-size: 15px; }
 .brand-caption { margin-top: 2px; color: #8990a2; font-size: 10px; }
+.connection-status { display:flex; align-items:center; gap:5px; }.connection-status span { width:6px; height:6px; border-radius:50%; background:#a5abba; }.connection-status.connected { color:#2d7b58; }.connection-status.connected span { background:#35a271; box-shadow:0 0 0 2px #dcf5e9; }.connection-status.demo { color:#8a6a22; }.connection-status.demo span { background:#d49a28; }.connection-status.offline { color:#b3485c; }.connection-status.offline span { background:#d95d70; }
 .icon-button { display: grid; place-items: center; width: 38px; height: 38px; padding: 0; border: 1px solid #e2e5ed; border-radius: 11px; color: #566077; background: white; transition: .16s ease; }
 .icon-button:hover { color: #5d49df; border-color: #cfc8ff; background: #f5f3ff; }
 .icon-button.small { width: 34px; height: 34px; }

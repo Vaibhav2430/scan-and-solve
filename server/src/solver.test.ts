@@ -57,6 +57,37 @@ describe("GeminiSolver", () => {
     const result = await solver.solve({ imageDataUrl: "data:image/png;base64,aGVsbG8=" });
     assert.equal(result.answer, "4");
   });
+
+  it("retries a temporary Gemini overload", async () => {
+    let attempts = 0;
+    const fetchImplementation: typeof fetch = async () => {
+      attempts += 1;
+      if (attempts === 1) {
+        return new Response(JSON.stringify({ error: { message: "The model is temporarily experiencing high demand." } }), {
+          status: 503,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+      return new Response(JSON.stringify({
+        candidates: [{ content: { parts: [{ text: JSON.stringify({
+          answer: "4",
+          interpretedQuestion: "What is 2 + 2?",
+          steps: [{ title: "Add", explanation: "Combine both values.", work: "2 + 2 = 4" }],
+          note: null
+        }) }] } }]
+      }), { status: 200, headers: { "Content-Type": "application/json" } });
+    };
+
+    const solver = new GeminiSolver({
+      apiKey: "test-key",
+      model: "test-model",
+      fetchImplementation,
+      retryDelayMs: 0
+    });
+    const result = await solver.solve({ imageDataUrl: "data:image/png;base64,aGVsbG8=" });
+    assert.equal(attempts, 2);
+    assert.equal(result.answer, "4");
+  });
 });
 
 describe("OpenAISolver", () => {

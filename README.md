@@ -2,7 +2,7 @@
 
 A Chrome extension that lets you drag a box around a question on a webpage and see the answer, a step-by-step explanation, and follow-up chat in the browser sidebar.
 
-**Status:** Active prototype. The extension, drag-to-scan capture flow, sidebar, local server, and Gemini vision integration are implemented. Without an API key the server stays in demo mode. This first version is for personal testing before a public release.
+**Status:** Version 1 is complete for personal use. The extension, drag-to-scan capture flow, sidebar, local server, Gemini vision integration, automated evaluation, and Chrome interaction checks are implemented. Without an API key the server stays in demo mode. Public distribution remains a separate future phase.
 
 ## The experience
 
@@ -123,6 +123,7 @@ scan-and-solve/
 - Follow-up chat that retains the current question's context.
 - KaTeX formatting for fractions, exponents, roots, matrices, and equations while preserving ordinary text and code.
 - Loading, cancellation, retry, copy answer, and start-over behavior.
+- Live sidebar status for Gemini connection, demo mode, and an offline local server.
 - A locally running backend connected to Gemini's hosted API.
 
 ### Optional fallback
@@ -155,10 +156,10 @@ The prototype is **not offline**: the local backend sends the selected crop and 
 | Stage | Deliverable | Completion check |
 | --- | --- | --- |
 | 1. Extension and interface | Locally installable extension with a React sidebar and sample answer | **Implemented:** toolbar opens the sidebar; answer-first layout and follow-up input are usable |
-| 2. Drag-to-scan | Selection overlay, cancellation, capture, cropping, and preview | **Implemented:** drag selection, local crop, preview, and Escape cancellation are built; manual browser testing remains |
+| 2. Drag-to-scan | Selection overlay, cancellation, capture, cropping, and preview | **Implemented:** drag selection, local crop, preview, and Escape cancellation are built and browser-tested |
 | 3. AI connection | Local Node.js backend and a selected vision model | **Implemented:** the Gemini API accepts the selected image and returns a structured answer; a free-tier API key is required for live testing |
-| 4. Chat and reliability | Contextual follow-ups, formatting, retry, cancellation, and error handling | Follow-ups refer to the correct question and failures leave the interface usable |
-| 5. Personal testing | Representative question set and browser checks | Document accuracy, incomplete-input behavior, response time, and approximate API cost |
+| 4. Chat and reliability | Contextual follow-ups, formatting, retry, cancellation, and error handling | **Implemented:** follow-ups retain the solution, math renders with KaTeX, and temporary Gemini overloads retry automatically |
+| 5. Personal testing | Representative question set and browser checks | **Complete for Version 1:** the live Gemini suite passed 10/10 known-answer cases plus an algebra follow-up; toolbar, keyboard shortcut, right-click, repeated scan, Escape, connection status, answer rendering, and follow-up flows passed in Chrome |
 | 6. Public-release preparation | Hosted backend, access controls, usage limits, and distribution materials | Address the public-release requirements below before opening access |
 
 ## Testing plan
@@ -233,4 +234,10 @@ npm test
 npm run build
 ```
 
-Tests currently cover image-coordinate scaling and server request validation. Manual browser checks are still required for Chrome permission behavior, selection appearance, and capture accuracy across display settings.
+The live accuracy suite generates question images, sends them through the configured Gemini solver, checks known answers and math formatting, and records response times:
+
+```bash
+npm run evaluate
+```
+
+Tests cover image-coordinate scaling, math tokenization, solver selection, structured Gemini/OpenAI responses, transient Gemini retry behavior, and server request validation. Version 1 was also checked manually in Chrome for activation, selection, cancellation, repeated scans, answer rendering, and follow-up behavior. Broader device, display-scaling, and webpage compatibility testing remains appropriate before a public release.

@@ -89,6 +89,7 @@ root.addEventListener("pointerup", (event) => {
 });
 
 document.addEventListener("keydown", onKeyDown, true);
+chrome.runtime.onMessage.addListener(onRuntimeMessage);
 
 function onKeyDown(event: KeyboardEvent): void {
   if (event.key !== "Escape") return;
@@ -97,8 +98,15 @@ function onKeyDown(event: KeyboardEvent): void {
   cleanup();
 }
 
+function onRuntimeMessage(message: unknown): boolean {
+  if (!message || typeof message !== "object" || (message as { type?: unknown }).type !== "CANCEL_SCAN") return false;
+  cleanup();
+  return false;
+}
+
 function cleanup(): void {
   document.removeEventListener("keydown", onKeyDown, true);
+  chrome.runtime.onMessage.removeListener(onRuntimeMessage);
   root.remove();
 }
 
