@@ -10,7 +10,7 @@ import { isSolutionResponse } from "./validation.ts";
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 const GEMINI_API_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 const DEFAULT_OPENAI_MODEL = "gpt-6-luna";
-const DEFAULT_GEMINI_MODEL = "gemini-3.1-flash-lite";
+const DEFAULT_GEMINI_MODEL = "gemini-4-hydrogen";
 const VALID_REASONING_EFFORTS = new Set(["none", "low", "medium", "high", "xhigh", "max"]);
 
 export interface Solver {
@@ -75,8 +75,7 @@ export class GeminiSolver implements Solver {
         ]
       }],
       generationConfig: {
-        temperature: 0.1,
-        maxOutputTokens: 4_000,
+        maxOutputTokens: 65_536,
         responseMimeType: "application/json",
         responseJsonSchema: solutionFormat.schema
       }
@@ -113,8 +112,7 @@ export class GeminiSolver implements Solver {
         ]
       }],
       generationConfig: {
-        temperature: 0.1,
-        maxOutputTokens: 2_000,
+        maxOutputTokens: 65_536,
         responseMimeType: "application/json",
         responseJsonSchema: followUpFormat.schema
       }

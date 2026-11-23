@@ -2,7 +2,7 @@
 
 A Chrome extension that lets you drag a box around a question on a webpage and see the answer, a step-by-step explanation, and follow-up chat in the browser sidebar.
 
-**Status:** Version 1 is complete for personal use. The extension, drag-to-scan capture flow, sidebar, local server, Gemini vision integration, automated evaluation, and Chrome interaction checks are implemented. Without an API key the server stays in demo mode. Public distribution remains a separate future phase.
+**Status:** Version 1 features are implemented for personal use: the extension, drag-to-scan capture flow, sidebar, local server, Gemini vision integration, automated evaluation, and Chrome interaction checks. The default model is now Gemini 4 Hydrogen (`gemini-4-hydrogen`). All 14 automated tests and TypeScript checks pass. A live scan and follow-up check with Hydrogen remains pending: the latest algebra evaluation was blocked by temporary Gemini high demand after retries. Without an API key the server stays in demo mode. Public distribution remains a separate future phase.
 
 ## The experience
 
@@ -51,7 +51,7 @@ Each step should explain what to do and why. Answers should support readable equ
 | Styling | HTML + CSS | Layout, typography, and interaction states |
 | Capture | Chrome screenshot API + browser Canvas API | Capture the visible tab and crop the selected region locally |
 | Backend | TypeScript + Node.js | Validate requests, call the AI service, and return responses |
-| AI | Gemini API, with Gemini 3.1 Flash-Lite as the default | Read the selected question and generate a structured solution using the free tier |
+| AI | Gemini API, with Gemini 4 Hydrogen as the default | Read the selected question and generate a structured solution using the free tier |
 | Preferences | Chrome local storage | Remember settings on the user's browser |
 | Shared contracts | TypeScript definitions and runtime validation | Keep extension and backend requests consistent |
 
@@ -159,7 +159,7 @@ The prototype is **not offline**: the local backend sends the selected crop and 
 | 2. Drag-to-scan | Selection overlay, cancellation, capture, cropping, and preview | **Implemented:** drag selection, local crop, preview, and Escape cancellation are built and browser-tested |
 | 3. AI connection | Local Node.js backend and a selected vision model | **Implemented:** the Gemini API accepts the selected image and returns a structured answer; a free-tier API key is required for live testing |
 | 4. Chat and reliability | Contextual follow-ups, formatting, retry, cancellation, and error handling | **Implemented:** follow-ups retain the solution, math renders with KaTeX, and temporary Gemini overloads retry automatically |
-| 5. Personal testing | Representative question set and browser checks | **Complete for Version 1:** the live Gemini suite passed 10/10 known-answer cases plus an algebra follow-up; toolbar, keyboard shortcut, right-click, repeated scan, Escape, connection status, answer rendering, and follow-up flows passed in Chrome |
+| 5. Personal testing | Representative question set and browser checks | **Prior Version 1 checks:** the previous model was reported to pass 10/10 known-answer cases plus an algebra follow-up; Chrome interaction checks passed. **Hydrogen verification pending:** repeat a live scan and follow-up once temporary API high demand clears |
 | 6. Public-release preparation | Hosted backend, access controls, usage limits, and distribution materials | Address the public-release requirements below before opening access |
 
 ## Testing plan
@@ -186,7 +186,7 @@ The prototype is **not offline**: the local backend sends the selected crop and 
 ## Decisions still open
 
 - Initial question focus: primarily schoolwork/math or broader webpage questions.
-- Model evaluation: test Gemini 3.1 Flash-Lite on representative questions for accuracy and response time.
+- Model evaluation: test Gemini 4 Hydrogen on representative questions for accuracy and response time.
 - Exact keyboard shortcut and visual styling.
 - Whether image paste/upload and local conversation history belong in the first release.
 - Hosting, account design, and pricing for a future public version.
@@ -220,7 +220,11 @@ Requirements: Chrome 116 or newer and Node.js 22.6 or newer.
 
 5. Open a normal webpage, click the **Scan & Solve** toolbar icon, drag around a question, and release.
 
-The server reports either `demo mode` or `gemini mode` when it starts. Gemini mode sends the selected crop and relevant follow-up context to the Gemini API. The API key remains in the local server process and is never bundled into the extension.
+The default configuration uses `AI_PROVIDER=gemini` and `GEMINI_MODEL=gemini-4-hydrogen` for both scanned questions and follow-ups. Existing installations should update `GEMINI_MODEL` in `server/.env` and restart the server. The code also defaults to Hydrogen when `GEMINI_MODEL` is unset. See [Google’s model documentation](https://aistudio.google.com/docs/models/gemini-4-hydrogen) and [current free-tier pricing](https://aistudio.google.com/docs/pricing#gemini-4-hydrogen).
+
+OpenAI remains an optional provider selected explicitly with `AI_PROVIDER=openai`, a valid `OPENAI_API_KEY`, and optionally `OPENAI_MODEL` (default: `gpt-6-luna`). Gemini errors do not automatically switch providers; temporary API errors retry up to twice with the same model, then surface an error. Missing or placeholder credentials for the selected provider use demo mode.
+
+The server reports its mode and model when it starts; `GET http://127.0.0.1:8787/health` also returns them. Gemini mode sends the selected crop and relevant follow-up context to the Gemini API. The API key remains in the local server process and is never bundled into the extension.
 
 The application cannot change a Google project's billing status. Before adding the key, confirm that AI Studio shows **Free** for that project. With no billing account linked, exceeding the free quota stops requests instead of charging for additional usage. Free-tier prompts and responses may be used by Google to improve its products, so do not scan private information.
 
@@ -238,6 +242,10 @@ The live accuracy suite generates question images, sends them through the config
 
 ```bash
 npm run evaluate
+# Run only algebra and its follow-up:
+npm run evaluate -- algebra
 ```
 
 Tests cover image-coordinate scaling, math tokenization, solver selection, structured Gemini/OpenAI responses, transient Gemini retry behavior, and server request validation. Version 1 was also checked manually in Chrome for activation, selection, cancellation, repeated scans, answer rendering, and follow-up behavior. Broader device, display-scaling, and webpage compatibility testing remains appropriate before a public release.
+
+The latest Hydrogen migration passed `npm test` (14 tests) and `npm run typecheck`. The live algebra check reached Gemini but failed with a temporary high-demand error after retries; it did not establish answer accuracy. Existing evaluation reports identify the model they tested and should not be treated as Hydrogen results unless they name `gemini-4-hydrogen`.
